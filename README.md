@@ -1,8 +1,8 @@
 # llama-index-ladybug
 
-[LlamaIndex](https://www.llamaindex.ai/) graph store integration for [Ladybug](https://ladybugdb.com/) — an open source, embedded graph database with Cypher query support, ACID transactions, and a built-in HNSW vector index.
+[LlamaIndex](https://www.llamaindex.ai/) graph store integration for [Ladybug](https://github.com/LadybugDB/ladybug) — an embedded graph database built for query speed and scalability. Ladybug is optimized for handling complex analytical workloads on very large databases and provides a set of retrieval features, such as full text search and vector indices.
 
-Ladybug is a fork of [Kùzu](https://kuzudb.com/), extended with additional features for graph RAG workloads.
+The database was formerly known as [Kùzu](https://kuzudb.com/).
 
 ## Installation
 
@@ -12,7 +12,7 @@ uv pip install llama-index-ladybug
 
 ## Quick Start
 
-### Property Graph (recommended)
+### LadybugPropertyGraphStore
 
 ```python
 from pathlib import Path
@@ -48,7 +48,7 @@ response = query_engine.query("What are the main topics in these documents?")
 print(response)
 ```
 
-### Knowledge Graph (legacy API)
+### LadybugGraphStore
 
 ```python
 import real_ladybug as lb
@@ -90,7 +90,7 @@ print(response)
 
 ```bash
 # Clone and set up
-git clone https://github.com/<your-org>/llama-index-ladybug
+git clone https://github.com/stevereiner/llama-index-ladybug
 cd llama-index-ladybug
 uv sync --group dev
 
