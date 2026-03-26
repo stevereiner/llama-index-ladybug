@@ -1,0 +1,35 @@
+---
+description: Keep CHANGELOG.md updated with every notable change
+alwaysApply: true
+---
+
+# Changelog Maintenance
+
+Always update `CHANGELOG.md` when making notable changes to this project.
+
+## What to log
+
+- **Fixed** — bug fixes
+- **Added** — new features or files
+- **Changed** — changes to existing behavior or APIs
+- **Removed** — removed features or files
+- **Security** — security-related fixes
+- **Deprecated** — soon-to-be removed features
+
+## Format
+
+New changes go under `## [Unreleased]`. When a version is released, rename that section to the version + date:
+
+```markdown
+## [0.11.0] - 2026-04-01
+
+### Fixed
+- Short description of what was fixed and why
+```
+
+## Rules
+
+- One bullet per logical change, not per file edited
+- Explain the *what* and *why*, not the *how*
+- Keep bullets concise (1-2 sentences max)
+- Do not log trivial changes (whitespace, comment typos)
