@@ -84,7 +84,7 @@ print(response)
 
 - [API Reference](docs/api/README.md)
 - [Property Graph Notebook](docs/notebooks/property_graph_ladybug.ipynb)
-- [Knowledge Graph Notebook](docs/notebooks/LadybugGraphDemo.ipynb)
+- [GraphStore Notebook](docs/notebooks/LadybugGraphDemo.ipynb)
 
 ## Development
 
