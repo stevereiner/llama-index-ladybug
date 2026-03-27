@@ -7,7 +7,7 @@ The database was formerly known as [Kùzu](https://kuzudb.com/).
 ## Installation
 
 ```bash
-uv pip install llama-index-ladybug
+uv pip install llama-index-graph-stores-ladybug
 ```
 
 ## Quick Start

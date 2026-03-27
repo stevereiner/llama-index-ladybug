@@ -3,7 +3,7 @@
 ## `LadybugGraphStore`
 
 ```bash
-uv pip install llama-index-ladybug
+uv pip install llama-index-graph-stores-ladybug
 ```
 
 ```python
@@ -110,7 +110,7 @@ Deletes a specific triplet and removes orphaned nodes (nodes with no remaining e
 ## `LadybugPropertyGraphStore`
 
 ```bash
-uv pip install llama-index-ladybug
+uv pip install llama-index-graph-stores-ladybug
 ```
 
 ```python

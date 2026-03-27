@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/notebooks/README.md` — overview of both notebooks and when to use each
 
 ### Changed
-- Renamed PyPI package from `llama-index-graph-stores-ladybug` to `llama-index-ladybug` in `pyproject.toml`, API docs, and both notebooks
+- PyPI package name set to `llama-index-graph-stores-ladybug` for consistency with other llama-index graph store integrations; GitHub repo remains `llama-index-ladybug`
 - Bumped initial package version to `0.15.2` to align with the minimum supported `real-ladybug` version
 - Added `nbstripout>=0.9.0` to dev dependencies and `.pre-commit-config.yaml` with an `nbstripout` hook so notebook outputs are always stripped before commits, regardless of whether Cursor has rerun them
 

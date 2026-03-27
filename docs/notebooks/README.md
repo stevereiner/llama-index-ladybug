@@ -15,7 +15,7 @@ Uses the modern `PropertyGraphIndex` API with `LadybugPropertyGraphStore`.
 - Building a combined graph + vector retriever
 - Running a `RetrieverQueryEngine` over the combined results
 
-Install: `uv pip install llama-index-ladybug llama-index-llms-openai llama-index-embeddings-openai`
+Install: `uv pip install llama-index-graph-stores-ladybug llama-index-llms-openai llama-index-embeddings-openai`
 
 ---
 
@@ -32,7 +32,7 @@ Uses the older `KnowledgeGraphIndex` API with `LadybugGraphStore`.
 
 This API is not deprecated by llama-index and remains fully functional. Use it if you prefer the simpler triplet-based graph model.
 
-Install: `uv pip install llama-index-ladybug llama-index-llms-openai pyvis`
+Install: `uv pip install llama-index-graph-stores-ladybug llama-index-llms-openai pyvis`
 
 ---
 

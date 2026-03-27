@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project]
-name = "llama-index-ladybug"
+name = "llama-index-graph-stores-ladybug"
 version = "0.15.2"
 description = "llama-index Ladybug graph store integration"
 authors = [{name = "Your Name", email = "you@example.com"}]
