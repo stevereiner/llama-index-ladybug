@@ -146,8 +146,8 @@ dmypy.json
 modules/
 *.swp
 
-# VsCode
-.vscode
+# Cursor IDE
+.cursor/
 
 # pipenv
 Pipfile
