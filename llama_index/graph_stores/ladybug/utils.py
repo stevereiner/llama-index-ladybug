@@ -59,9 +59,17 @@ def get_filtered_props(records: dict, filter_list: List[str]) -> dict:
 def lookup_relation(relation: str, triples: List[Triple]) -> Triple:
     """
     Look up a triple in a list of triples by the middle value.
+    Tries exact match first, then case-insensitive match.
+    Returns None if no match found.
     """
+    # Exact match first
     for triple in triples:
         if triple[1] == relation:
+            return triple
+    # Case-insensitive fallback
+    relation_upper = relation.upper()
+    for triple in triples:
+        if triple[1].upper() == relation_upper:
             return triple
     return None
 

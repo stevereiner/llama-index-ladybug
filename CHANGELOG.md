@@ -22,3 +22,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Upgraded `real-ladybug` dependency from `0.12.0` to `>=0.15.2,<0.16` to resolve a native access violation crash when calling `CREATE_VECTOR_INDEX` on Windows with Python 3.13
 - Fixed deprecation warning in `base.py` by replacing separate `prepare()` + `execute()` calls with a single `execute()` call as required by the updated `real-ladybug` API
+- Fixed crash in `upsert_relations` and `delete` when the LLM returns a relation label that doesn't exactly match the case of the relationship schema (e.g. `"works_for"` vs `"WORKS_FOR"`); `lookup_relation` in `utils.py` now tries a case-insensitive match before returning `None`, and both call sites fall back to `("Entity", "LINKS", "Entity")` if the relation is still not found, matching unstructured mode behavior instead of crashing with an unpack error

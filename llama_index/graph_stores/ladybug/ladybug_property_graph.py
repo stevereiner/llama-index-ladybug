@@ -314,9 +314,19 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
     def upsert_relations(self, relations: List[Relation]) -> None:
         for rel in relations:
             if self.has_structured_schema:
-                src, rel_tbl_name, dst = utils.lookup_relation(
+                result = utils.lookup_relation(
                     rel.label, self.relationship_schema
                 )
+                if result is None:
+                    # LLM produced a relation label not in the schema (case mismatch or
+                    # out-of-schema label). Try case-insensitive match first.
+                    result = utils.lookup_relation(
+                        rel.label.upper(), self.relationship_schema
+                    )
+                if result is None:
+                    # Still not found — fall back to generic Entity/LINKS/Entity
+                    result = ("Entity", "LINKS", "Entity")
+                src, rel_tbl_name, dst = result
             else:
                 src, rel_tbl_name, dst = "Entity", "LINKS", "Entity"
 
@@ -633,7 +643,10 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
 
         if relation_names:
             for rel in relation_names:
-                src, _, dst = utils.lookup_relation(rel, self.relationship_schema)
+                result = utils.lookup_relation(rel, self.relationship_schema)
+                if result is None:
+                    result = ("Entity", "LINKS", "Entity")
+                src, _, dst = result
                 self.structured_query(
                     f"""
                     MATCH (:{src})-[r {{label: $label}}]->(:{dst})
