@@ -148,6 +148,7 @@ modules/
 
 # Cursor IDE
 .cursor/
+memory-bank/
 
 # pipenv
 Pipfile

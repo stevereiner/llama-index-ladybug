@@ -12,7 +12,9 @@ uv pip install llama-index-graph-stores-ladybug
 
 ## Quick Start
 
-### LadybugPropertyGraphStore
+### LadybugPropertyGraphStore — unstructured (default)
+
+No schema required. All LLM-extracted entities are stored as Entity type and only relation types are Links and Mentions.
 
 ```python
 from pathlib import Path
@@ -46,6 +48,28 @@ index = PropertyGraphIndex.from_documents(
 query_engine = index.as_query_engine()
 response = query_engine.query("What are the main topics in these documents?")
 print(response)
+```
+
+### LadybugPropertyGraphStore — structured schema
+
+Pass a `relationship_schema` to guide the LLM towards your schema.
+
+`strict_schema=False` (default) allows the graph to expand beyond the declared types — off-schema entities and relations are stored in overflow tables alongside the schema-defined ones.
+
+`strict_schema=True` enforces the schema strictly — off-schema entities and relations are silently dropped at ingest.
+
+```python
+graph_store = LadybugPropertyGraphStore(
+    db,
+    relationship_schema=[
+        ("PERSON", "WORKS_FOR", "ORGANIZATION"),
+        ("PERSON", "KNOWS", "PERSON"),
+    ],
+    has_structured_schema=True,
+    strict_schema=False,   # True to reject off-schema types entirely
+    use_vector_index=True,
+    embed_model=embed_model,
+)
 ```
 
 ### LadybugGraphStore
@@ -101,8 +125,12 @@ pytest
 pre-commit install
 ```
 
+## Acknowledgements
+
+Started from the Kuzu → Ladybug llama-index support port by [@adsharma](https://github.com/adsharma) ([PR #20232](https://github.com/run-llama/llama_index/pull/20232)) — a proposed LadybugDB (formerly Kùzu) integration into the upstream llama-index repo.
+
 ## Requirements
 
 - Python 3.9+
-- `real-ladybug >= 0.15.2`
+- `real-ladybug >= 0.15.3`
 - `llama-index-core >= 0.13.0`

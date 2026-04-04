@@ -119,6 +119,16 @@ from llama_index.graph_stores.ladybug import LadybugPropertyGraphStore
 
 Property graph store using the `PropertyGraphIndex` API. Supports structured schemas, vector similarity search, and Cypher queries.
 
+Three schema modes are available, controlled by `has_structured_schema` and `strict_schema`:
+
+| Mode | `has_structured_schema` | `strict_schema` | Behaviour |
+|------|------------------------|-----------------|-----------|
+| **Unstructured** | `False` (default) | — | No ontology enforced. All LLM-extracted types stored freely in `Entity` + `LINKS` tables |
+| **Structured, non-strict** | `True` | `False` (default) | Schema tables created as declared; an `Entity`/`LINKS` overflow pair is also created so off-schema types are stored rather than dropped — the graph can expand beyond the declared ontology |
+| **Structured, strict** | `True` | `True` | Only declared node/relation types are created; off-schema entities and relations are silently dropped at ingest |
+
+In all modes a `Chunk` node table and a `MENTIONS` relation table are always present.
+
 ### Constructor
 
 ```python
@@ -126,6 +136,7 @@ LadybugPropertyGraphStore(
     db: lb.Database,
     relationship_schema: Optional[List[Tuple[str, str, str]]] = None,
     has_structured_schema: bool = False,
+    strict_schema: bool = False,
     sanitize_query_output: bool = True,
     use_vector_index: bool = True,
     embed_model: Optional[Any] = None,
@@ -136,16 +147,17 @@ LadybugPropertyGraphStore(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `db` | `lb.Database` | — | An open Ladybug `Database` instance |
-| `relationship_schema` | `List[Tuple[str, str, str]]` | `None` | Required when `has_structured_schema=True`. List of `(head, relation, tail)` triples that define valid relationship types |
-| `has_structured_schema` | `bool` | `False` | If `True`, enforces the provided `relationship_schema` on all upserted nodes and relations |
-| `sanitize_query_output` | `bool` | `True` | If `True`, sanitizes query results to remove internal Ladybug metadata |
-| `use_vector_index` | `bool` | `True` | If `True`, creates and uses a Ladybug HNSW vector index on `Chunk` nodes for similarity search |
-| `embed_model` | embedding model | `None` | Embedding model instance used to auto-detect `embed_dimension` and for vector queries |
-| `embed_dimension` | `int` | `None` | Explicit embedding dimension. Used as fallback if auto-detection from `embed_model` fails |
+| `relationship_schema` | `List[Tuple[str, str, str]]` | `None` | Required when `has_structured_schema=True`. List of `(head, relation, tail)` triples defining the ontology |
+| `has_structured_schema` | `bool` | `False` | If `True`, creates node/relation tables from `relationship_schema`; if `False`, uses generic `Entity`/`LINKS` tables |
+| `strict_schema` | `bool` | `False` | Only meaningful when `has_structured_schema=True`. If `True`, off-schema types are dropped; if `False`, an `Entity`/`LINKS` overflow pair captures them |
+| `sanitize_query_output` | `bool` | `True` | If `True`, strips internal Ladybug metadata from query results |
+| `use_vector_index` | `bool` | `True` | If `True`, creates and maintains a Ladybug HNSW vector index on `Chunk` nodes for similarity search |
+| `embed_model` | embedding model | `None` | Embedding model used to auto-detect `embed_dimension` |
+| `embed_dimension` | `int` | `None` | Explicit embedding dimension; used as fallback if auto-detection fails |
 
 **Notes:**
 - If `use_vector_index=True` and `embed_model` is provided, the embedding dimension is auto-detected by running a test embedding.
-- If `has_structured_schema=True` and `relationship_schema=None`, a `ValueError` is raised.
+- If `has_structured_schema=True` and `relationship_schema=None`, a warning is logged and the store falls back to unstructured mode.
 - The `Chunk` node type is always added to the schema regardless of `has_structured_schema`.
 
 ### Instance Methods

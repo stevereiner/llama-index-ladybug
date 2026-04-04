@@ -27,14 +27,14 @@ dev = [
 
 [project]
 name = "llama-index-graph-stores-ladybug"
-version = "0.15.2"
+version = "0.3.0"
 description = "llama-index Ladybug graph store integration"
 authors = [{name = "Your Name", email = "you@example.com"}]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
 license = "MIT"
 dependencies = [
-    "real_ladybug>=0.15.2,<0.16",
+    "real_ladybug>=0.15.3,<0.16",
     "llama-index-core>=0.13.0,<0.15",
 ]
 

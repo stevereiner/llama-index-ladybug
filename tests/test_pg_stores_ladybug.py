@@ -305,6 +305,13 @@ def test_vector_query_with_mock_results(
         similarity_top_k=2,
     )
 
+    def _make_execute_result(rows, col_names):
+        """Return a mock that behaves like a Ladybug QueryResult."""
+        mock_result = Mock()
+        mock_result.get_column_names.return_value = col_names
+        mock_result.__iter__ = Mock(return_value=iter(rows))
+        return mock_result
+
     # Mock both vector index query and structured query calls
     with (
         patch.object(pg_store_with_vectors.connection, "execute") as mock_execute,
@@ -312,18 +319,24 @@ def test_vector_query_with_mock_results(
             pg_store_with_vectors, "structured_query"
         ) as mock_structured_query,
     ):
-        # Mock different execute calls based on query type
+        # Mock different execute calls based on query type.
+        # MENTIONS expansion now goes through connection.execute (bypasses
+        # value_sanitize) so it must return a result with get_column_names().
         def mock_execute_side_effect(query, **kwargs):
             if "COUNT(n)" in query:
-                return [(2,)]  # Return count of 2
+                return [(2,)]
             elif "SHOW_INDEXES" in query:
-                return [("table", "chunk_embedding_index")]  # Return existing index
+                return [("table", "chunk_embedding_index")]
+            elif "MENTIONS" in query:
+                # MENTIONS expansion — return empty result (triggers fallback)
+                return _make_execute_result([], ["entity_id", "chunk_id", "name", "e", "entity_label"])
             else:
-                return [("chunk1", 0.1), ("chunk2", 0.3)]  # Vector search results
+                # QUERY_VECTOR_INDEX result: plain row tuples are fine here
+                return [("chunk1", 0.1), ("chunk2", 0.3)]
 
         mock_execute.side_effect = mock_execute_side_effect
 
-        # Mock structured query results for fetching chunk data
+        # structured_query is still used for fetching chunk node data in the fallback
         mock_structured_query.side_effect = [
             # First call - fetch chunk1 data
             [
@@ -379,3 +392,124 @@ def test_vector_query_ensures_indexes(
 
             # Verify _ensure_vector_indexes was called
             mock_ensure.assert_called_once()
+
+
+def test_upsert_chunk_twice_with_vector_index(pg_store_with_vectors):
+    """Upsert the same ChunkNode twice (simulating incremental add of 2nd document).
+
+    With use_vector_index=True the second upsert must not raise
+    'Cannot set property vec in table embeddings because it is used in one or more indexes.'
+    The fix: pre-delete + CREATE instead of MERGE+SET.
+    """
+    embedding = [0.1] * 384
+
+    chunk = ChunkNode(
+        id_="test-chunk-inc-001",
+        text="First version of the chunk text.",
+        label="chunk",
+        embedding=embedding,
+        properties={
+            "ref_doc_id": "doc-001",
+            "creation_date": "2026-01-01",
+            "last_modified_date": "2026-01-01",
+            "file_name": "doc1.txt",
+            "file_path": "/docs/doc1.txt",
+            "file_size": "100",
+            "file_type": ".txt",
+        },
+    )
+
+    # First ingest — must succeed
+    pg_store_with_vectors.upsert_nodes([chunk])
+
+    # Verify it was stored
+    results = pg_store_with_vectors.structured_query(
+        "MATCH (c:Chunk {id: $id}) RETURN c.id",
+        param_map={"id": "test-chunk-inc-001"},
+    )
+    assert results, "Chunk should exist after first upsert"
+
+    # Second ingest of the same chunk (incremental update / re-ingest scenario).
+    # This is the operation that previously raised RuntimeError from Ladybug.
+    chunk2 = ChunkNode(
+        id_="test-chunk-inc-001",  # same id — simulates re-ingest
+        text="Updated version of the chunk text.",
+        label="chunk",
+        embedding=[0.2] * 384,
+        properties={
+            "ref_doc_id": "doc-001",
+            "creation_date": "2026-01-01",
+            "last_modified_date": "2026-03-29",
+            "file_name": "doc1.txt",
+            "file_path": "/docs/doc1.txt",
+            "file_size": "110",
+            "file_type": ".txt",
+        },
+    )
+
+    # Must not raise RuntimeError
+    pg_store_with_vectors.upsert_nodes([chunk2])
+
+    # Verify the updated text is stored (not the old one)
+    results = pg_store_with_vectors.structured_query(
+        "MATCH (c:Chunk {id: $id}) RETURN c.text",
+        param_map={"id": "test-chunk-inc-001"},
+    )
+    assert results, "Chunk should still exist after second upsert"
+    assert results[0]["c.text"] == "Updated version of the chunk text.", \
+        f"Expected updated text, got: {results[0]}"
+
+
+def test_upsert_two_different_chunks_with_vector_index(pg_store_with_vectors):
+    """Upsert two different ChunkNodes (simulating adding a 2nd document).
+
+    Ensures the second chunk INSERT doesn't fail due to vector index constraint
+    on the first chunk's already-indexed embedding row.
+    """
+    embedding_a = [0.1] * 384
+    embedding_b = [0.9] * 384
+
+    chunk_a = ChunkNode(
+        id_="test-chunk-doc1-001",
+        text="Content from document 1.",
+        label="chunk",
+        embedding=embedding_a,
+        properties={
+            "ref_doc_id": "doc-001",
+            "creation_date": "2026-01-01",
+            "last_modified_date": "2026-01-01",
+            "file_name": "doc1.txt",
+            "file_path": "/docs/doc1.txt",
+            "file_size": "100",
+            "file_type": ".txt",
+        },
+    )
+    chunk_b = ChunkNode(
+        id_="test-chunk-doc2-001",
+        text="Content from document 2.",
+        label="chunk",
+        embedding=embedding_b,
+        properties={
+            "ref_doc_id": "doc-002",
+            "creation_date": "2026-01-02",
+            "last_modified_date": "2026-01-02",
+            "file_name": "doc2.txt",
+            "file_path": "/docs/doc2.txt",
+            "file_size": "200",
+            "file_type": ".txt",
+        },
+    )
+
+    # First document
+    pg_store_with_vectors.upsert_nodes([chunk_a])
+
+    # Second document — must not raise RuntimeError
+    pg_store_with_vectors.upsert_nodes([chunk_b])
+
+    # Both chunks should exist
+    results = pg_store_with_vectors.structured_query(
+        "MATCH (c:Chunk) RETURN c.id ORDER BY c.id"
+    )
+    ids = [r["c.id"] for r in results]
+    assert "test-chunk-doc1-001" in ids
+    assert "test-chunk-doc2-001" in ids
