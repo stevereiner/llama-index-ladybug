@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+## [0.3.1] - 2026-04-12
+
+### Changed
+- Renamed dependency from `real-ladybug` to `ladybug` across the entire repo (PyPI package was renamed); updated `pyproject.toml`, `uv.lock`, all source files (`base.py`, `utils.py`, `ladybug_property_graph.py`), tests, notebooks, `README.md`, and `docs/api/README.md`
+- Bumped minimum `llama-index-core` from `>=0.13.0` to `>=0.14.20` in `pyproject.toml` and `README.md` requirements to align with current flexible-graphrag usage
+- Bumped Python minimum from `3.9+` to `3.10+` in `pyproject.toml` and `README.md`
+- Bumped package version from `0.3.0` to `0.3.1`
+- `uv.lock` regenerated from adsharma's py3.14 base lock (PR #1) with updated `ladybug 0.15.3` (renamed from `real-ladybug`), `llama-index-core 0.14.20`, and `llama-index-graph-stores-ladybug 0.3.1` entries
+- Added `import ladybug as lb` to both import blocks in `docs/api/README.md` so `lb.Database` / `lb.Connection` constructor references are self-contained
+
+### Fixed
+- `ChunkNode(metadata=...)` deprecation in `test_bugs.py` — replaced with `ChunkNode(properties=...)` for llama-index-core 0.14.x compatibility
+
+## [2026-04-10]
+
+### Changed
+- Merged PR #1 from adsharma/dependencies — updated `pyproject.toml` and `uv.lock` to add Python 3.14 (`cp314`) wheel support for `real-ladybug 0.15.3`
+
 ## [0.3.0] - 2026-04-03
 
 ### Changed
