@@ -13,7 +13,7 @@ from llama_index.core.graph_stores.utils import value_sanitize
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import VectorStoreQuery
 
-import real_ladybug as lb
+import ladybug as lb
 
 # Threshold for max number of returned triplets
 LIMIT = 100
@@ -51,7 +51,7 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
 
     Ladybug can be installed with::
 
-        uv pip install real_ladybug
+        uv pip install ladybug
     """
 
     def __init__(

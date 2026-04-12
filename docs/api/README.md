@@ -8,6 +8,7 @@ uv pip install llama-index-graph-stores-ladybug
 
 ```python
 from llama_index.graph_stores.ladybug import LadybugGraphStore
+import ladybug as lb
 ```
 
 Legacy graph store using the `KnowledgeGraphIndex` API. Stores triplets (subject, predicate, object) in a Ladybug database. Use `LadybugPropertyGraphStore` for new projects.
@@ -115,6 +116,7 @@ uv pip install llama-index-graph-stores-ladybug
 
 ```python
 from llama_index.graph_stores.ladybug import LadybugPropertyGraphStore
+import ladybug as lb
 ```
 
 Property graph store using the `PropertyGraphIndex` API. Supports structured schemas, vector similarity search, and Cypher queries.

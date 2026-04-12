@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple, _LiteralGenericAlias, get_args
 
-import real_ladybug as lb
+import ladybug as lb
 
 Triple = Tuple[str, str, str]
 

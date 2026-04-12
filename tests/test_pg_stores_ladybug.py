@@ -36,7 +36,7 @@ def setup_and_teardown():
 
 @pytest.fixture()
 def pg_store() -> Generator[LadybugPropertyGraphStore, None, None]:
-    import real_ladybug as lb
+    import ladybug as lb
 
     # Remove existing database file
     db_file = "llama_test_db.ladybug"
@@ -62,7 +62,7 @@ def pg_store_with_vectors() -> Generator[LadybugPropertyGraphStore, None, None]:
     """Fixture for pg_store with vector indexing enabled."""
     import uuid
 
-    import real_ladybug as lb
+    import ladybug as lb
 
     # Use unique database file name to avoid conflicts
     db_file = f"llama_test_db_vector_{uuid.uuid4().hex[:8]}.ladybug"

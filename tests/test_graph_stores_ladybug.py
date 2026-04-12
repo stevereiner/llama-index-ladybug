@@ -34,7 +34,7 @@ def setup_and_teardown():
 @pytest.fixture()
 def ladybug_graph_store() -> Generator[LadybugGraphStore, None, None]:
     """Fixture for LadybugGraphStore with proper cleanup."""
-    import real_ladybug as lb
+    import ladybug as lb
 
     db_file = "test_ladybug_graph_store.ladybug"
     Path(db_file).unlink(missing_ok=True)

@@ -21,7 +21,7 @@ from typing import Generator, List
 import uuid
 
 import pytest
-import real_ladybug as lb
+import ladybug as lb
 from llama_index.core.graph_stores.types import ChunkNode, EntityNode, Relation
 from llama_index.graph_stores.ladybug import LadybugPropertyGraphStore
 from llama_index.graph_stores.ladybug.utils import safe_label, safe_rel_label, quote_id
@@ -362,7 +362,7 @@ def test_mentions_survive_128_threshold(tmp_path):
     chunk = ChunkNode(
         id_=chunk_id,
         text="test chunk with many entities",
-        metadata={"ref_doc_id": "doc1"},
+        properties={"ref_doc_id": "doc1"},
     )
     entities = [
         EntityNode(label="PERSON", name=f"Person{i}", id=f"Person{i}")
@@ -436,7 +436,7 @@ def test_get_rel_map_survives_128_threshold(tmp_path):
     chunk = ChunkNode(
         id_=chunk_id,
         text="test chunk",
-        metadata={"ref_doc_id": "doc1"},
+        properties={"ref_doc_id": "doc1"},
     )
     entities = [
         EntityNode(label="PERSON", name=f"Person{i}", id=f"Person{i}")

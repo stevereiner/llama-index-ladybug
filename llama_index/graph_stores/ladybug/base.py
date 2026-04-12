@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from llama_index.core.graph_stores.types import GraphStore
 
-import real_ladybug as lb
+import ladybug as lb
 
 
 class LadybugGraphStore(GraphStore):

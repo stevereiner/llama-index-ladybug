@@ -18,7 +18,7 @@ No schema required. All LLM-extracted entities are stored as Entity type and onl
 
 ```python
 from pathlib import Path
-import real_ladybug as lb
+import ladybug as lb
 from llama_index.graph_stores.ladybug import LadybugPropertyGraphStore
 from llama_index.core import PropertyGraphIndex, SimpleDirectoryReader
 from llama_index.embeddings.openai import OpenAIEmbedding
@@ -75,7 +75,7 @@ graph_store = LadybugPropertyGraphStore(
 ### LadybugGraphStore
 
 ```python
-import real_ladybug as lb
+import ladybug as lb
 from llama_index.graph_stores.ladybug import LadybugGraphStore
 from llama_index.core import KnowledgeGraphIndex, StorageContext, SimpleDirectoryReader
 
@@ -131,6 +131,6 @@ Started from the Kuzu → Ladybug llama-index support port by [@adsharma](https:
 
 ## Requirements
 
-- Python 3.9+
-- `real-ladybug >= 0.15.3`
-- `llama-index-core >= 0.13.0`
+- Python 3.10+
+- `ladybug >= 0.15.3`
+- `llama-index-core >= 0.14.20`
