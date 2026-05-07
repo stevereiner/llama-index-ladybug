@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-07
+
+### Changed
+- Updated `ladybug` dependency from `>=0.15.3,<0.16` to `>=0.16.1` to track the new 0.16.x release line; bumped package version to `0.3.2`
+
 ## [0.3.1] - 2026-04-12
 
 ### Changed
