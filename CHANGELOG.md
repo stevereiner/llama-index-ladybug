@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-05-12
+
+### Fixed
+- **`vector_query` crash on empty database** — calling `vector_query` before any nodes have been
+  upserted raised a `Binder` or `chunk_embedding_index` error because Ladybug cannot create a vector
+  index on an empty table. The public `vector_query` method now catches those specific errors and
+  returns `([], [])`, allowing callers to handle an empty result normally. The implementation body
+  was extracted to `_vector_query_impl` so subclasses can override just the logic without losing the
+  guard.
+
 ## [0.3.2] - 2026-05-07
 
 ### Changed

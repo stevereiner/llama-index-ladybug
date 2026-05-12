@@ -775,7 +775,28 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
         triplet_source_id set to the originating chunk ID so that
         add_source_text() can fetch and attach the chunk text.
         This mirrors how ArcadeDB and Neo4j integrate with VectorContextRetriever.
+
+        Returns empty results gracefully when the vector index does not exist yet
+        (before first ingest). Ladybug requires at least one row in a table before
+        a vector index can be created; a search arriving before first ingest raises
+        a ``Binder`` or ``chunk_embedding_index`` error.
         """
+        try:
+            return self._vector_query_impl(query, **kwargs)
+        except Exception as _vec_err:
+            err_str = str(_vec_err)
+            if "chunk_embedding_index" in err_str or "Binder" in err_str:
+                logger.debug(
+                    "Ladybug vector_query: index not ready yet (%s), returning empty",
+                    _vec_err,
+                )
+                return [], []
+            raise
+
+    def _vector_query_impl(
+        self, query: VectorStoreQuery, **kwargs: Any
+    ) -> Tuple[List[LabelledNode], List[float]]:
+        """Internal implementation of vector_query — called by the public wrapper."""
         self._ensure_vector_indexes()
 
         # Step 1: vector search on Chunk nodes
