@@ -10,6 +10,26 @@ The database was formerly known as [Kùzu](https://kuzudb.com/).
 uv pip install llama-index-graph-stores-ladybug
 ```
 
+### Vector index extension (Ladybug 0.18.x+)
+
+With `use_vector_index=True` (the default), the store loads Ladybug's **VECTOR extension** on first
+use (`INSTALL vector; LOAD vector;`). `INSTALL` downloads it over the network the first time, then
+caches it under `~/.lbdb/extension/` — after that it works offline. `LadybugPropertyGraphStore`
+handles the Windows DLL-loading quirk automatically.
+
+For **offline / CI / proxied** environments, pre-download the extension once where the network is
+available (this caches it for later offline `LOAD`):
+
+```bash
+python -c "import ladybug, tempfile, os; ladybug.Connection(ladybug.Database(os.path.join(tempfile.mkdtemp(), 'db'))).execute('INSTALL vector;')"
+```
+
+For Docker, run that during the image build, or copy the populated `~/.lbdb/extension/` into the
+image. If `LOAD` still fails on Windows with error 126, antivirus may be locking the freshly
+downloaded library — retry, or exclude `%USERPROFILE%\.lbdb\` from real-time scanning. Set
+`use_vector_index=False` to skip vector indexing entirely. (On Ladybug ≤ 0.16.x this was a core
+function, no download needed.)
+
 ## Quick Start
 
 ### LadybugPropertyGraphStore — unstructured (default)
@@ -132,5 +152,8 @@ Started from the Kuzu → Ladybug llama-index support port by [@adsharma](https:
 ## Requirements
 
 - Python 3.10+
-- `ladybug >= 0.15.3`
+- `ladybug >= 0.18.2`
 - `llama-index-core >= 0.14.20`
+- For the vector index on Ladybug 0.18.x+: the downloadable **VECTOR extension** (see
+  [Vector index extension](#vector-index-extension-ladybug-018x) above) — needs network on first
+  use, then cached under `~/.lbdb/extension/`.

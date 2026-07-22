@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-07-21
+
+### Changed
+- Bumped minimum `ladybug` from `>=0.16.1` to `>=0.18.2`. As of 0.18.x, vector indexing (`CREATE_VECTOR_INDEX`) lives in a loadable VECTOR extension rather than core — see the extension-load fix below. The extension is downloaded at runtime via `INSTALL vector;` (needs network the first time, then cached under `~/.lbdb/extension/`); there is no `ladybug[vector]` pip extra. See the README "Vector index extension" section for offline / Docker / corporate-proxy pre-bake instructions.
+
+### Fixed
+- **`get_triplets()` raised `KeyError: '_label'`** (`ladybug_property_graph.py`) — the loop used bare bracket access (`record["e"]["_label"]`, `["_id"]`, `record["r"]["_src"]`/`["_dst"]`) assuming lowercase internal metadata keys, but `structured_query` returns them uppercase (`_LABEL`/`_ID`/`_SRC`/`_DST`, as `get_rel_map` and `vector_query` already handle). Now reads either case via `.get()`, skips malformed or `Chunk` rows instead of raising, filters both `_id`/`_ID` and `_label`/`_LABEL` out of node properties, and defaults a missing entity label to `"Entity"`.
+- **Vector extension load failures were silently swallowed** (`ladybug_property_graph.py`) — the `INSTALL vector; LOAD vector;` setup ran as one statement wrapped in `except RuntimeError: pass`, so if `INSTALL` errored (already-installed or unreachable) `LOAD` was skipped, and any failure surfaced later as a confusing `Catalog exception: function CREATE_VECTOR_INDEX is not defined` (hit on Ladybug 0.18.x, where vector indexing moved into the loadable VECTOR extension). `INSTALL` and `LOAD` now run separately (a benign `INSTALL` error no longer skips `LOAD`), and a real `LOAD` failure logs a warning with remediation instead of being discarded.
+- **`LOAD vector` failed on Windows with `error 126` from a plain `cmd`/PowerShell venv** (`ladybug_property_graph.py`) — the downloaded VECTOR extension imports `libssl-3-x64.dll` / `libcrypto-3-x64.dll` by plain name, but the ladybug wheel ships those OpenSSL DLLs delvewheel-mangled in `ladybug.libs`, so the engine's native loader couldn't find them (`IO exception: Failed to load library … libvector.lbug_extension … The specified module could not be found`) unless an unmangled copy happened to be on `PATH` (e.g. Git's `mingw64\bin`). The store now stages unmangled copies into `~/.lbdb/dll_shim` and adds it to the DLL search path on init, so `LOAD` works regardless of how Python was launched. (Upstream ladybug packaging gap; this is a defensive shim.)
+
 ## [0.3.3] - 2026-05-12
 
 ### Fixed

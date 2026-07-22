@@ -21,6 +21,55 @@ Triple = Tuple[str, str, str]
 logger = logging.getLogger(__name__)
 
 
+def _ensure_windows_vector_ext_deps() -> None:
+    """Make the downloaded VECTOR extension's DLL dependencies loadable on Windows.
+
+    The `vector` extension (downloaded by ``INSTALL vector``) imports
+    ``libssl-3-x64.dll`` / ``libcrypto-3-x64.dll`` by their plain names. The ladybug
+    wheel ships those OpenSSL DLLs in ``ladybug.libs`` but *delvewheel-mangled*
+    (``libssl-3-x64-<hash>.dll``), so the engine's native ``LoadLibrary`` can't resolve
+    the plain names and ``LOAD vector`` fails with WinError 126 ("The specified module
+    could not be found") — unless an unmangled copy happens to be on ``PATH`` (e.g. from
+    Git's ``mingw64\\bin``). Stage unmangled copies in a cache dir and put it on the DLL
+    search path so ``LOAD vector`` works regardless of how Python was launched.
+
+    Best-effort, Windows-only, no-op elsewhere. (Really an upstream ladybug packaging
+    gap; this is a defensive shim.)
+    """
+    import sys
+
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import os
+        import pathlib
+        import shutil
+
+        libs = pathlib.Path(lb.__file__).resolve().parent.parent / "ladybug.libs"
+        if not libs.is_dir():
+            return
+        cache = pathlib.Path(os.path.expanduser("~")) / ".lbdb" / "dll_shim"
+        cache.mkdir(parents=True, exist_ok=True)
+        staged = False
+        for plain in ("libssl-3-x64.dll", "libcrypto-3-x64.dll"):
+            dst = cache / plain
+            if dst.exists():
+                staged = True
+                continue
+            hits = list(libs.glob(plain[:-4] + "-*.dll"))
+            if hits:
+                shutil.copy(hits[0], dst)
+                staged = True
+        if staged:
+            os.environ["PATH"] = str(cache) + os.pathsep + os.environ.get("PATH", "")
+            try:
+                os.add_dll_directory(str(cache))
+            except (OSError, AttributeError):
+                pass
+    except Exception as e:  # never block store init on the shim
+        logger.debug("Ladybug: could not stage Windows vector-ext DLLs: %s", e)
+
+
 class LadybugPropertyGraphStore(PropertyGraphStore):
     """
     Ladybug Property Graph Store.
@@ -76,16 +125,33 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
             embed_model, embed_dimension
         )
 
-        # Install and load vector extension if using vector indexes
+        # Install and load vector extension if using vector indexes.
+        # As of Ladybug 0.18.x vector indexing lives in a loadable VECTOR extension
+        # (CREATE_VECTOR_INDEX is no longer a core function). INSTALL downloads the
+        # extension once (needs network the first time, persisted to disk after) and can
+        # error if it's already installed or unreachable; LOAD activates it per-connection
+        # and must run every session. Keep them separate so a benign INSTALL error doesn't
+        # skip LOAD, and log (don't silently swallow) so a genuine load failure is visible
+        # instead of surfacing later as a confusing "CREATE_VECTOR_INDEX is not defined".
         if self.use_vector_index:
+            _ensure_windows_vector_ext_deps()
             try:
-                self.connection.execute("INSTALL vector; LOAD vector;")
-            except RuntimeError:
-                # print("Warning: Skipping installing vector extension due to RuntimeError:", e)
-                # print("Check that you can install Ladybug's vector extension by running: " \
-                #       "`INSTALL vector; LOAD vector;` in a Ladybug CLI session."
-                # )
-                pass
+                self.connection.execute("INSTALL vector;")
+            except RuntimeError as e:
+                logger.debug(
+                    "Ladybug vector extension INSTALL skipped (already installed or "
+                    "unreachable): %s",
+                    e,
+                )
+            try:
+                self.connection.execute("LOAD vector;")
+            except RuntimeError as e:
+                logger.warning(
+                    "Ladybug vector extension failed to LOAD — vector indexing will be "
+                    "unavailable. Install it manually in a Ladybug CLI session with "
+                    "`INSTALL vector; LOAD vector;` (needs network the first time). Error: %s",
+                    e,
+                )
 
         if has_structured_schema:
             if relationship_schema is None:
@@ -1022,28 +1088,46 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
         result = self.structured_query(cypher_statement, param_map=params)
         result = result if result else []
 
+        # Ladybug's internal node/rel metadata keys are returned with varying case
+        # depending on the query path (_LABEL/_ID/_SRC/_DST uppercase via structured_query,
+        # lowercase elsewhere — see get_rel_map / base.py). Read them case-tolerantly with
+        # .get() so a missing/differently-cased key skips the row instead of raising
+        # KeyError: '_label'.
+        def _meta(d: dict, name: str):
+            return d.get(f"_{name.upper()}", d.get(f"_{name.lower()}"))
+
         triples = []
         for record in result:
-            if record["e"]["_label"] == "Chunk":
+            e, t, r = record.get("e"), record.get("t"), record.get("r")
+            if not (isinstance(e, dict) and isinstance(t, dict) and isinstance(r, dict)):
                 continue
 
-            src_table = record["e"]["_id"]["table"]
-            dst_table = record["t"]["_id"]["table"]
-            id_map = {src_table: record["e"]["id"], dst_table: record["t"]["id"]}
+            e_label = _meta(e, "label")
+            t_label = _meta(t, "label")
+            if e_label == "Chunk" or t_label == "Chunk":
+                continue
+
+            e_id = _meta(e, "id") or {}
+            t_id = _meta(t, "id") or {}
+            src_table = e_id.get("table")
+            dst_table = t_id.get("table")
+            id_map = {src_table: e.get("id"), dst_table: t.get("id")}
             source = EntityNode(
-                name=record["e"].get("name", record["e"]["id"]),
-                label=record["e"]["_label"],
-                properties=utils.get_filtered_props(record["e"], ["_id", "_label"]),
+                name=e.get("name", e.get("id")),
+                label=e_label or "Entity",
+                properties=utils.get_filtered_props(e, ["_id", "_ID", "_label", "_LABEL"]),
             )
             target = EntityNode(
-                name=record["t"].get("name", record["t"]["id"]),
-                label=record["t"]["_label"],
-                properties=utils.get_filtered_props(record["t"], ["_id", "_label"]),
+                name=t.get("name", t.get("id")),
+                label=t_label or "Entity",
+                properties=utils.get_filtered_props(t, ["_id", "_ID", "_label", "_LABEL"]),
             )
+            r_src = _meta(r, "src") or {}
+            r_dst = _meta(r, "dst") or {}
             rel = Relation(
-                source_id=id_map.get(record["r"]["_src"]["table"], "unknown"),
-                target_id=id_map.get(record["r"]["_dst"]["table"], "unknown"),
-                label=record["r"]["label"],
+                source_id=id_map.get(r_src.get("table"), "unknown"),
+                target_id=id_map.get(r_dst.get("table"), "unknown"),
+                label=r.get("label") or _meta(r, "label") or "",
             )
             triples.append([source, rel, target])
         return triples
