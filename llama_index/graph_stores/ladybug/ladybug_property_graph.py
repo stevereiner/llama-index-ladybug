@@ -21,55 +21,6 @@ Triple = Tuple[str, str, str]
 logger = logging.getLogger(__name__)
 
 
-def _ensure_windows_vector_ext_deps() -> None:
-    """Make the downloaded VECTOR extension's DLL dependencies loadable on Windows.
-
-    The `vector` extension (downloaded by ``INSTALL vector``) imports
-    ``libssl-3-x64.dll`` / ``libcrypto-3-x64.dll`` by their plain names. The ladybug
-    wheel ships those OpenSSL DLLs in ``ladybug.libs`` but *delvewheel-mangled*
-    (``libssl-3-x64-<hash>.dll``), so the engine's native ``LoadLibrary`` can't resolve
-    the plain names and ``LOAD vector`` fails with WinError 126 ("The specified module
-    could not be found") — unless an unmangled copy happens to be on ``PATH`` (e.g. from
-    Git's ``mingw64\\bin``). Stage unmangled copies in a cache dir and put it on the DLL
-    search path so ``LOAD vector`` works regardless of how Python was launched.
-
-    Best-effort, Windows-only, no-op elsewhere. (Really an upstream ladybug packaging
-    gap; this is a defensive shim.)
-    """
-    import sys
-
-    if not sys.platform.startswith("win"):
-        return
-    try:
-        import os
-        import pathlib
-        import shutil
-
-        libs = pathlib.Path(lb.__file__).resolve().parent.parent / "ladybug.libs"
-        if not libs.is_dir():
-            return
-        cache = pathlib.Path(os.path.expanduser("~")) / ".lbdb" / "dll_shim"
-        cache.mkdir(parents=True, exist_ok=True)
-        staged = False
-        for plain in ("libssl-3-x64.dll", "libcrypto-3-x64.dll"):
-            dst = cache / plain
-            if dst.exists():
-                staged = True
-                continue
-            hits = list(libs.glob(plain[:-4] + "-*.dll"))
-            if hits:
-                shutil.copy(hits[0], dst)
-                staged = True
-        if staged:
-            os.environ["PATH"] = str(cache) + os.pathsep + os.environ.get("PATH", "")
-            try:
-                os.add_dll_directory(str(cache))
-            except (OSError, AttributeError):
-                pass
-    except Exception as e:  # never block store init on the shim
-        logger.debug("Ladybug: could not stage Windows vector-ext DLLs: %s", e)
-
-
 class LadybugPropertyGraphStore(PropertyGraphStore):
     """
     Ladybug Property Graph Store.
@@ -134,7 +85,6 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
         # skip LOAD, and log (don't silently swallow) so a genuine load failure is visible
         # instead of surfacing later as a confusing "CREATE_VECTOR_INDEX is not defined".
         if self.use_vector_index:
-            _ensure_windows_vector_ext_deps()
             try:
                 self.connection.execute("INSTALL vector;")
             except RuntimeError as e:
@@ -147,9 +97,9 @@ class LadybugPropertyGraphStore(PropertyGraphStore):
                 self.connection.execute("LOAD vector;")
             except RuntimeError as e:
                 logger.warning(
-                    "Ladybug vector extension failed to LOAD — vector indexing will be "
-                    "unavailable. Install it manually in a Ladybug CLI session with "
-                    "`INSTALL vector; LOAD vector;` (needs network the first time). Error: %s",
+                    "Ladybug vector extension failed to LOAD — vector indexing unavailable. "
+                    "On Windows, install OpenSSL 3: see the README 'Vector index extension' "
+                    "section for instructions. Error: %s",
                     e,
                 )
 
